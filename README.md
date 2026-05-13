@@ -23,18 +23,8 @@ Only the core modeling scripts are included. Large forcing datasets, model execu
 
 ## Workflow
 
-```mermaid
-flowchart LR
-    A[DEM, coastline, TC tracks, ERA5, tide data] --> B[ADCIRC mesh and forcing]
-    A --> C[VIC meteorological forcing]
-    C --> D[VIC runoff simulation]
-    D --> E[CaMa-Flood routing]
-    B --> F[SFINCS boundary forcing]
-    E --> F
-    A --> G[TC rainfall forcing]
-    G --> F
-    F --> H[SFINCS inundation simulation]
-```
+<img width="5222" height="4132" alt="fig1" src="https://github.com/user-attachments/assets/f97b2529-758b-4898-ad56-21fba8fb3f1f" />
+
 
 ## Repository Layout
 
@@ -160,4 +150,4 @@ If you use or adapt this workflow, please cite the associated study or contact t
 
 ## Author
 
-Anyifang Zhang, Tsinghua University
+Anyifang Zhang
