@@ -25,6 +25,8 @@ Only the core modeling scripts are included. Large forcing datasets, model execu
 
 <img width="5222" height="4132" alt="fig1" src="https://github.com/user-attachments/assets/f97b2529-758b-4898-ad56-21fba8fb3f1f" />
 
+## Example
+<img width="3163" height="3499" alt="fig2" src="https://github.com/user-attachments/assets/d1c17bcf-6f36-4ab9-8ef6-5cc7dcc7aa49" />
 
 ## Repository Layout
 
