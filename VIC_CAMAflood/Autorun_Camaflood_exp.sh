@@ -112,7 +112,7 @@ CFLDHGT="${FMAP}/fldhgt.bin"                # floodplain elevation profile (heig
 
 #** channel parameter
 ###CRIVWTH=${FMAP}/rivwth.bin"              # channel width [m] (empirical power-low)
-CRIVWTH="${FMAP}/rivwth.bin"          # channel width [m] (GWD-LR + filled with empirical)
+CRIVWTH="${FMAP}/rivwth_gwdlr.bin"          # channel width [m] (GWD-LR + filled with empirical)
 CRIVHGT="${FMAP}/rivhgt.bin"                # channel depth [m] (empirical power-low)
 CRIVMAN="${FMAP}/rivman.bin"                # manning coefficient river (The one in flood plain is a global parameter; set $PMANFLD below.)
 
