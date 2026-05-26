@@ -154,8 +154,8 @@ CVARSOUT="rivout,rivsto,rivdph,rivvel,fldout,fldsto,flddph,fldfrc,fldare,sfcelv,
 COUTTAG=""  # see (3) set each year         #   output tag $(COUTDIR)/$(VARNAME)$(OUTTAG).bin
 
 ##### Model Parameters ################
-PMANRIV="0.03D0"                            # manning coefficient river
-PMANFLD="0.10D0"                            # manning coefficient floodplain
+PMANRIV="0.01D0"                            # manning coefficient river
+PMANFLD="0.03D0"                            # manning coefficient floodplain
 PCADP="0.7"                                 # satety coefficient for CFL condition
 PDSTMTH="10000.D0"                          # downstream distance at river mouth [m]
 
