@@ -569,8 +569,8 @@ beta(I3) = 25;
 
 vmoc = vmc .* r .* Rmax_m ./ (r.^2 + Rmax_m^2);
 
-Vx_TC = 0.85 .* vg .* cosd(cta + 90 + beta) + vmoc .* cosd(fai);
-Vy_TC = 0.85 .* vg .* sind(cta + 90 + beta) + vmoc .* sind(fai);
+Vx_TC =  vg .* cosd(cta + 90 + beta) + vmoc .* cosd(fai);
+Vy_TC =  vg .* sind(cta + 90 + beta) + vmoc .* sind(fai);
 
 Vx_TC = 0.893 .* Vx_TC;
 Vy_TC = 0.893 .* Vy_TC;
