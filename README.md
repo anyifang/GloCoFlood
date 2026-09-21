@@ -24,6 +24,7 @@ repository is downloaded.
 > simulation outputs are not distributed in the repository.
 
 ## Quick start
+<img width="9990" height="3456" alt="prd_sfincs_domain" src="https://github.com/user-attachments/assets/2de7e5b9-a751-4987-b16c-a2be41a4f42c" />
 
 Run these commands from the repository root:
 
@@ -97,6 +98,7 @@ build.
 ## Global production workflow
 
 ### 1. Acquire and register input data
+<img width="881" height="501" alt="image" src="https://github.com/user-attachments/assets/8b09bcea-6cc2-4014-bc69-713beff70892" />
 
 The utilities in [`data_download/`](data_download/README.md) support official
 IBTrACS and ERA5/CDS requests and check the proposed external-data layout:
@@ -127,6 +129,7 @@ P1-P9 workflow to:
 Copy `ADCIRC/global_build/configure_paths.example.m` to the ignored local file
 `configure_paths.m`, set the external-data and work locations, and follow the
 numbered scripts in the component README.
+<img width="6004" height="5223" alt="adcirc_fort14_oceanmesh_blog_panels_6col_sharedcb_v6" src="https://github.com/user-attachments/assets/04b7d8a9-c08e-42c3-bfdc-a51781d59c64" />
 
 ### 3. Generate river discharge
 
@@ -140,7 +143,8 @@ python VIC_CAMAflood/global_postprocessing/P1_plot_sfincs_inflow_diagnostics.py 
 python VIC_CAMAflood/global_postprocessing/P2_build_gtc_inlet_tc_flow_summary_from_cache.py --help
 ```
 
-### 4. Build the 97 SFINCS domains
+### 4. Build the SFINCS domains
+
 
 [`SFINCS/global_build/P1_build_sfincs_models_from_partition.py`](SFINCS/global_build/P1_build_sfincs_models_from_partition.py)
 builds reusable `GTC_####` domains from the included partition inventory. A
@@ -238,18 +242,16 @@ fresh-copy tests. These checks validate repository integration; they do not
 replace scientific validation of external datasets or full ADCIRC,
 CaMa-Flood and SFINCS simulations.
 
-## Citation and licence
+### Application in four representative estuarine and deltaic regions
+To demonstrate the transferability of the modelling framework, GloCoFlood was
+applied to four contrasting, TC-prone coastal systems: the Mississippi River
+Delta (MRD), Yangtze River Delta (YRD), Bay of Bengal (BoB) and Pearl River
+Delta (PRD). The same coupled workflow is used in each region, while the model
+domains, mesh resolution, river network and forcing boundaries are adapted to
+the local coastal setting.
 
-If you use or adapt this workflow, please cite the associated study and the
-underlying ADCIRC, SFINCS, VIC, CaMa-Flood, CLIMADA and input-dataset
-references. A formal software citation will be added when the author list and
-archive DOI are final.
+<img width="3163" height="3499" alt="global_domain_examples" src="https://github.com/user-attachments/assets/8ba6a4c2-b89d-447f-8bdf-a46396db4c75" />
 
-**A repository licence has not yet been selected.** Until a `LICENSE` file is
-added, the source is publicly visible but no general permission to copy,
-modify or redistribute it is granted. Maintainers should complete the
-[release checklist](RELEASE_CHECKLIST.md) before publishing a versioned
-release.
 
 ## Author
 
