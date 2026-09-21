@@ -67,7 +67,6 @@ build.
 ## Global production workflow
 
 ### 1. Acquire and register input data
-<img width="881" height="501" alt="image" src="https://github.com/user-attachments/assets/8b09bcea-6cc2-4014-bc69-713beff70892" />
 
 The utilities in [`data_download/`](data_download/README.md) support official
 IBTrACS and ERA5/CDS requests and check the proposed external-data layout:
@@ -114,6 +113,7 @@ python VIC_CAMAflood/global_postprocessing/P2_build_gtc_inlet_tc_flow_summary_fr
 
 ### 4. Build the SFINCS domains
 
+<img width="3285" height="1849" alt="image" src="https://github.com/user-attachments/assets/b94de808-9dc2-445b-9b09-f8165dd4dd9a" />
 
 [`SFINCS/global_build/P1_build_sfincs_models_from_partition.py`](SFINCS/global_build/P1_build_sfincs_models_from_partition.py)
 builds reusable `GTC_####` domains from the included partition inventory. A
