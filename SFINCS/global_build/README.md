@@ -41,17 +41,6 @@ forcing) and P3 (future forcing). `run_four_compound_builds_parallel.py` and
 additional stages to run afterwards. The plotting and `utilities/` scripts
 are optional diagnostics.
 
-## C15/TCR wind convention
-
-The track variable `vmax_trks` is the 1-min near-surface wind. Rmax and
-Holland-B retain the surface-wind definitions used by the ADCIRC builder.
-Physics-based TCR requires gradient-level wind, so the builder first computes
-`gradient_core = max(vmax_trks - translation_speed, 0) / 0.9`. This gradient
-peak selects the C15 lookup profile, which is then used directly as the TCR
-gradient-wind profile; `C15.vg` is not divided by `0.9` a second time. The
-same `0.9` relationship is used by the TCR humidity diagnosis. ADCIRC's
-independent `0.893` conversion from 1-min to 10-min surface wind is not
-applied to TCR rainfall.
 
 
 ## Installation
