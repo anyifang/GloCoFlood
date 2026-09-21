@@ -157,26 +157,6 @@ The builders cache the invariant ADCIRC-to-SFINCS boundary mapping and reuse
 static domain files where possible. Preserve the generated directory tree
 when transferring cases because `sfincs.inp` may contain relative references.
 
-## Scientific conventions implemented in the public workflow
-
-- `vmax_trks` is treated as the total 1-min near-surface maximum wind.
-- Translation speed is removed once to obtain the symmetric rotating surface
-  core used by the Cv/Rmax and Holland-B calculations.
-- In the ADCIRC builder, C15 supplies the 1-min surface tangential profile;
-  translation is restored once and the complete surface field is multiplied
-  by `0.893` to produce the 10-min wind written to `fort.22`. No additional
-  `0.85` factor is applied.
-- Physics-based TCR uses gradient-level wind. The SFINCS rainfall builder uses
-  `gradient_core = surface_core / 0.9` to select the C15 profile and uses the
-  returned profile directly; it is not divided by `0.9` a second time. The
-  same surface-to-gradient relationship is used in the TCR humidity
-  diagnosis.
-- The ADCIRC `0.893` averaging-period conversion is independent of the TCR
-  `0.9` surface-to-gradient relationship and is not applied to rainfall.
-
-More detailed conventions and required variables are documented in the
-[ADCIRC global-build guide](ADCIRC/global_build/README.md) and
-[SFINCS global-build guide](SFINCS/global_build/README.md).
 
 ## Software and data requirements
 
@@ -223,7 +203,7 @@ the local coastal setting.
 
 
 ## Quick start
-<img width="9990" height="3456" alt="prd_sfincs_domain" src="https://github.com/user-attachments/assets/2de7e5b9-a751-4987-b16c-a2be41a4f42c" />
+
 
 Run these commands from the repository root:
 
@@ -248,6 +228,8 @@ as well with:
 ```bash
 python example/PRD_single_TC/run_prd_single_tc.py \
   --sfincs-executable /path/to/sfincs
+
+<img width="9990" height="3456" alt="prd_sfincs_domain" src="https://github.com/user-attachments/assets/2de7e5b9-a751-4987-b16c-a2be41a4f42c" />
 ```
 
 Windows users may run `run_prd_example.bat`; Linux and macOS users may run
