@@ -23,37 +23,6 @@ repository is downloaded.
 > modelling service. Large licensed datasets, model executables and global
 > simulation outputs are not distributed in the repository.
 
-## Quick start
-<img width="9990" height="3456" alt="prd_sfincs_domain" src="https://github.com/user-attachments/assets/2de7e5b9-a751-4987-b16c-a2be41a4f42c" />
-
-Run these commands from the repository root:
-
-```bash
-python check_repository.py
-python -m pip install -r example/PRD_single_TC/requirements.txt
-python example/PRD_single_TC/run_prd_single_tc.py
-```
-
-The first command checks the published inventories and bundled-data
-checksums. The remaining commands prepare and validate one complete historical
-PRD compound-forcing case under:
-
-```text
-example/PRD_single_TC/output/
-```
-
-This default example does not require the global source archives and does not
-launch SFINCS. If a SFINCS executable is available, run the hydrodynamic model
-as well with:
-
-```bash
-python example/PRD_single_TC/run_prd_single_tc.py \
-  --sfincs-executable /path/to/sfincs
-```
-
-Windows users may run `run_prd_example.bat`; Linux and macOS users may run
-`./run_prd_example.sh`. See [QUICKSTART.md](QUICKSTART.md) and the
-[PRD example guide](example/PRD_single_TC/README.md) for details.
 
 ## Coupled modelling framework
 <img width="5223" height="4130" alt="fig1" src="https://github.com/user-attachments/assets/f5b953df-eb7f-4ba9-a5b4-312dd4c88542" />
@@ -252,6 +221,38 @@ the local coastal setting.
 
 <img width="3163" height="3499" alt="global_domain_examples" src="https://github.com/user-attachments/assets/8ba6a4c2-b89d-447f-8bdf-a46396db4c75" />
 
+
+## Quick start
+<img width="9990" height="3456" alt="prd_sfincs_domain" src="https://github.com/user-attachments/assets/2de7e5b9-a751-4987-b16c-a2be41a4f42c" />
+
+Run these commands from the repository root:
+
+```bash
+python check_repository.py
+python -m pip install -r example/PRD_single_TC/requirements.txt
+python example/PRD_single_TC/run_prd_single_tc.py
+```
+
+The first command checks the published inventories and bundled-data
+checksums. The remaining commands prepare and validate one complete historical
+PRD compound-forcing case under:
+
+```text
+example/PRD_single_TC/output/
+```
+
+This default example does not require the global source archives and does not
+launch SFINCS. If a SFINCS executable is available, run the hydrodynamic model
+as well with:
+
+```bash
+python example/PRD_single_TC/run_prd_single_tc.py \
+  --sfincs-executable /path/to/sfincs
+```
+
+Windows users may run `run_prd_example.bat`; Linux and macOS users may run
+`./run_prd_example.sh`. See [QUICKSTART.md](QUICKSTART.md) and the
+[PRD example guide](example/PRD_single_TC/README.md) for details.
 
 ## Author
 
