@@ -1,0 +1,459 @@
+function auto_adcirc_domain_capsule(lon_c, lat_c, alongshore_radius, offshore_deg, inland_deg, bay_close_deg, ellipse_ratio, inner_radius, gshhs_shp, out_shp)
+    % 终极流体包裹算法：板块海峡智能阻断 + 阻断墙平滑 + 剃除异常突出 + 椭圆支持 + 内部加密区
+    % 修改重点：
+    %   内部加密区不再简单用 “FinalMask_Shrunk ∩ 椭圆 ∩ NearShore”
+    %   而是：
+    %       1) 靠海侧：沿用旋转椭圆边界
+    %       2) 靠岸侧：贴合最终海岸/最终域
+    %       3) 向陆限制最大延伸距离，避免过度吃进陆地
+    
+    fprintf('\n=== 启动全新流体包裹计算域生成引擎 ===\n');
+    fprintf('中心: [%.4f, %.4f]\n', lon_c, lat_c);
+    
+    % 1. 参数读取与保护
+    alongshore_radius = abs(alongshore_radius);
+    offshore_deg      = abs(offshore_deg);
+    inland_deg        = abs(inland_deg);
+    bay_close_deg     = abs(bay_close_deg);
+    ellipse_ratio     = abs(ellipse_ratio);
+    inner_radius      = abs(inner_radius);
+    
+    % 2. 建立高精度栅格画布
+    max_canvas_r = max(alongshore_radius + offshore_deg, (alongshore_radius + offshore_deg) * ellipse_ratio);
+    bbox_size = max_canvas_r + inland_deg + 1;
+    lon_min = lon_c - bbox_size; lon_max = lon_c + bbox_size;
+    lat_min = lat_c - bbox_size; lat_max = lat_c + bbox_size;
+    
+    lon_rng = lon_max - lon_min; 
+    lat_rng = lat_max - lat_min;
+    MAX_PIXELS = 5e6; 
+    dx = sqrt((lon_rng * lat_rng) / MAX_PIXELS);
+    nlon = ceil(lon_rng/dx) + 1; 
+    nlat = ceil(lat_rng/dx) + 1;
+    pix_deg = lon_rng / (nlon - 1);
+    
+    fprintf('1. 读取并栅格化陆地数据 (精度: %.4f 度/像素)...\n', pix_deg);
+    S = shaperead(gshhs_shp, 'BoundingBox', [lon_min, lat_min; lon_max, lat_max]);
+    LandMask = false(nlat, nlon);
+    
+    for i = 1:numel(S)
+        x = S(i).X(:); 
+        y = S(i).Y(:);
+        v = ~isnan(x) & ~isnan(y);
+        if nnz(v) < 3
+            continue;
+        end
+        col = (x(v) - lon_min) / pix_deg + 1;
+        row = (y(v) - lat_min) / pix_deg + 1;
+        LandMask = LandMask | poly2mask(col, row, nlat, nlon);
+    end
+    OceanMask = ~LandMask;
+    
+    % =========================================================================
+    % 2. 板块海峡智能阻断
+    % =========================================================================
+    fprintf('2. 提取大板块，执行海峡智能阻断分析...\n');
+    
+    CC_land = bwconncomp(LandMask, 8);
+    numPixels = cellfun(@numel, CC_land.PixelIdxList);
+    [~, sorted_idx] = sort(numPixels, 'descend');
+    num_major = min(15, length(sorted_idx));
+    
+    R_strait_deg = 1;
+    R_strait_pix = round(R_strait_deg / pix_deg);
+    se_strait = strel('disk', R_strait_pix);
+    
+    DilatedSum = zeros(size(LandMask), 'uint8');
+    for i = 1:num_major
+        idx = sorted_idx(i);
+        if numPixels(idx) < round(5 / (pix_deg^2))
+            continue;
+        end
+        
+        tmp_mask = false(size(LandMask));
+        tmp_mask(CC_land.PixelIdxList{idx}) = true;
+        tmp_dilated = imdilate(tmp_mask, se_strait);
+        DilatedSum = DilatedSum + uint8(tmp_dilated);
+    end
+    
+    StraitBarrier = (DilatedSum >= 2) & OceanMask;
+    
+    fprintf('   -> 正在对海峡阻断墙进行抛光打磨...\n');
+    R_barrier_smooth = round(0.25 / pix_deg); 
+    if R_barrier_smooth > 0
+        StraitBarrier = imclose(StraitBarrier, strel('disk', R_barrier_smooth));
+        StraitBarrier = imopen(StraitBarrier, strel('disk', R_barrier_smooth));
+    end
+    StraitBarrier = StraitBarrier & OceanMask;
+    
+    % =========================================================================
+    % 3. 提取连通水域
+    % =========================================================================
+    fprintf('3. 在阻断墙限制下提取单侧目标海域...\n');
+    [ColGrid, RowGrid] = meshgrid(1:nlon, 1:nlat);
+    c_col = round((lon_c - lon_min) / pix_deg) + 1;
+    c_row = round((lat_c - lat_min) / pix_deg) + 1;
+    c_col = max(1, min(nlon, c_col)); 
+    c_row = max(1, min(nlat, c_row));
+    
+    X_Dist = (ColGrid - c_col) * pix_deg;
+    Y_Dist = (RowGrid - c_row) * pix_deg;
+    DistFromCenter = sqrt(X_Dist.^2 + (Y_Dist / ellipse_ratio).^2);
+    
+    MaxOceanRadius = alongshore_radius + offshore_deg;
+    BaseCircle = DistFromCenter <= MaxOceanRadius;
+    
+    LocalOcean = OceanMask & BaseCircle & ~StraitBarrier;
+    
+    if ~LocalOcean(c_row, c_col)
+        [yo, xo] = find(LocalOcean);
+        if isempty(xo)
+            error('错误：选定区域内没有海洋！');
+        end
+        [~, min_idx] = min((xo - c_col).^2 + (yo - c_row).^2);
+        c_col_seed = xo(min_idx); 
+        c_row_seed = yo(min_idx);
+    else
+        c_col_seed = c_col; 
+        c_row_seed = c_row;
+    end
+    
+    TargetOcean = bwselect(LocalOcean, c_col_seed, c_row_seed, 8);
+    
+    OtherOcean = (OceanMask & BaseCircle) & ~TargetOcean;
+    OtherOcean = bwareaopen(OtherOcean, 20);
+    
+    % =========================================================================
+    % 4. 生成海洋域
+    % =========================================================================
+    fprintf('4. 生成海洋基础域并执行“跨湾区平滑桥接”...\n');
+    R_bay_pix = round(bay_close_deg / pix_deg);
+    if R_bay_pix > 0
+        OceanDomain = imclose(TargetOcean, strel('disk', R_bay_pix));
+        OceanDomain = OceanDomain & ~(OtherOcean | StraitBarrier);
+    else
+        OceanDomain = TargetOcean;
+    end
+    
+    % =========================================================================
+    % 5. 生成陆地域
+    % =========================================================================
+    fprintf('5. 生成陆地域，执行双向距离场防穿透探测...\n');
+    D_Target = bwdist(TargetOcean) * pix_deg;
+    if any(OtherOcean(:))
+        D_Other = bwdist(OtherOcean) * pix_deg;
+    else
+        D_Other = inf(size(D_Target));
+    end
+    
+    OceanDomain_Dilated = imdilate(OceanDomain, strel('disk', round((inland_deg+0.5) / pix_deg)));
+    LandDomain = LandMask & OceanDomain_Dilated & (D_Target <= inland_deg) & (D_Target < D_Other - 0.05);
+    
+    % =========================================================================
+    % 6. 合并域并清理
+    % =========================================================================
+    fprintf('6. 组合海陆域并使用剃刀切除异常半岛突出...\n');
+    FinalMask = OceanDomain | LandDomain;
+    FinalMask = imfill(FinalMask, 'holes');
+    
+    CombinedMaskBeforeRazor = FinalMask;
+    
+    R_cut_deg = max(0.5, min(alongshore_radius, offshore_deg) * 0.25);
+    R_cut_pix = round(R_cut_deg / pix_deg);
+    if R_cut_pix > 0
+        FinalMask = imopen(FinalMask, strel('disk', R_cut_pix));
+    end
+    
+    FinalMask = bwareaopen(FinalMask, max(10, round(100 / pix_deg)));
+    FinalMask = imfill(FinalMask, 'holes');
+    
+    fprintf('   -> 正在填补合并后向内的尖角与缝隙...\n');
+    R_fill_deg = max(0.5, min(alongshore_radius, offshore_deg) * 0.15);
+    R_fill_pix = round(R_fill_deg / pix_deg);
+    if R_fill_pix > 0
+        FinalMask = imclose(FinalMask, strel('disk', R_fill_pix));
+    end
+    
+    % =========================================================================
+    % 6宫格可视化
+    % =========================================================================
+    fprintf('>>> 正在生成底层栅格 6宫格透视图...\n');
+    figure('Name', 'Raster Processing Steps', 'Color', 'w', 'Position', [50, 50, 1200, 800]);
+    x_ext = [lon_min, lon_max]; 
+    y_ext = [lat_min, lat_max];
+    
+    ax1 = subplot(2,3,1);
+    render_step(ax1, x_ext, y_ext, LandMask, BaseCircle & OceanMask, [0.7 0.8 1], [], [], '1. Base Circle Limit', lon_c, lat_c);
+    ax2 = subplot(2,3,2);
+    render_step(ax2, x_ext, y_ext, LandMask, OceanMask, [0.8 0.9 1], StraitBarrier, [1 0 0], '2. Strait Barriers (Red) Smoothed', lon_c, lat_c);
+    ax3 = subplot(2,3,3);
+    render_step(ax3, x_ext, y_ext, LandMask, TargetOcean, [0.2 0.5 1], OtherOcean, [1 0.4 0.4], '3. Target (Blue) vs Isolated (Red)', lon_c, lat_c);
+    ax4 = subplot(2,3,4);
+    render_step(ax4, x_ext, y_ext, LandMask, OceanDomain, [0.2 0.5 1], [], [], '4. Ocean Domain (Bay Bridged)', lon_c, lat_c);
+    ax5 = subplot(2,3,5);
+    render_step(ax5, x_ext, y_ext, LandMask, CombinedMaskBeforeRazor, [0.6 0.4 0.8], [], [], '5. Combined Domain (Before Razor)', lon_c, lat_c);
+    ax6 = subplot(2,3,6);
+    render_step(ax6, x_ext, y_ext, LandMask, FinalMask, [0.6 0.4 0.8], [], [], '6. Final Domain (After Opening Razor)', lon_c, lat_c);
+    drawnow;
+    
+    % =========================================================================
+    % 7. 矢量化外边界
+    % =========================================================================
+    fprintf('7. 矢量化边界并执行海陆分离平滑 (仅平滑外海边界，严格保护陆地)...\n');
+    B = bwboundaries(FinalMask, 8, 'noholes');
+    [~, max_b] = max(cellfun(@length, B));
+    bnd = B{max_b};
+    r_idx = bnd(:,1);
+    c_idx = bnd(:,2);
+    x_bnd = lon_min + (c_idx - 1) * pix_deg;
+    y_bnd = lat_min + (r_idx - 1) * pix_deg;
+    
+    N_pts = length(x_bnd);
+    pad_len = round(N_pts * 0.15);
+    x_pad = [x_bnd(end-pad_len+1:end); x_bnd; x_bnd(1:pad_len)];
+    y_pad = [y_bnd(end-pad_len+1:end); y_bnd; y_bnd(1:pad_len)];
+    
+    sm_win = max(20, round(N_pts * 0.04));
+    x_sm_pad = smoothdata(x_pad, 'gaussian', sm_win);
+    y_sm_pad = smoothdata(y_pad, 'gaussian', sm_win);
+    
+    x_sm = x_sm_pad(pad_len+1 : end-pad_len);
+    y_sm = y_sm_pad(pad_len+1 : end-pad_len);
+    
+    D_Land = bwdist(LandMask) * pix_deg;
+    idx_linear = sub2ind(size(LandMask), r_idx, c_idx);
+    d_points = D_Land(idx_linear);
+    
+    trans_dist = 0.05;
+    W = min(1, d_points / trans_dist);
+    x_final = W .* x_sm + (1 - W) .* x_bnd;
+    y_final = W .* y_sm + (1 - W) .* y_bnd;
+    
+    P_final = polyshape(x_final, y_final, 'Simplify', true);
+    [x_out, y_out] = boundary(P_final);
+    
+    % =========================================================================
+    % 8. 生成内部加密区
+    %    关键修改：
+    %    - 靠海侧：沿用旋转椭圆边界
+    %    - 靠岸侧：贴合 FinalMask_Shrunk / 海岸
+    % =========================================================================
+    fprintf('8. 生成内部局部加密区域 (靠海侧沿用椭圆边界，靠岸侧贴合海岸)...\n');
+    
+    % 1) 外边界向内收缩，避免贴到最外圈边界
+    R_shrink_pix = round(0.3 / pix_deg);
+    if R_shrink_pix > 0
+        FinalMask_Shrunk = imerode(FinalMask, strel('disk', R_shrink_pix));
+    else
+        FinalMask_Shrunk = FinalMask;
+    end
+    
+% 2) 提取局部海岸线主轴方向
+%    关键改动：不要拿 inner_radius 内所有海岸线做 PCA，
+%    只用“离中心最近的一小段海岸线”
+CoastlinePts = bwperim(LandMask);
+[r_c, c_c] = find(CoastlinePts);
+
+dist_to_c = sqrt(((c_c - c_col) * pix_deg).^2 + ((r_c - c_row) * pix_deg).^2);
+local_idx = dist_to_c <= inner_radius;
+local_c = c_c(local_idx);
+local_r = r_c(local_idx);
+
+if length(local_c) > 10
+    % 只取最近的一小段海岸线做 PCA，避免 Mississippi 这种多叉口把方向带偏
+    d2 = (local_c - c_col).^2 + (local_r - c_row).^2;
+    [~, isrt] = sort(d2, 'ascend');
+    nkeep = min(80, length(isrt));   % 可调
+    keep_id = isrt(1:nkeep);
+
+    pts = [local_c(keep_id) - c_col, local_r(keep_id) - c_row] * pix_deg;
+    C_matrix = cov(pts);
+    [V, D] = eig(C_matrix);
+    [~, max_idx] = max(diag(D));
+    v_dir = V(:, max_idx);
+    theta = atan2(v_dir(2), v_dir(1));
+else
+    theta = 0;
+end
+
+% 3) 旋转坐标
+X_rot = X_Dist * cos(theta) + Y_Dist * sin(theta);
+Y_rot = -X_Dist * sin(theta) + Y_Dist * cos(theta);
+
+% 4) 旋转椭圆（海侧外边界）
+inner_flat_ratio = 0.8;
+InnerEllipseMask = (X_rot.^2 + (Y_rot / inner_flat_ratio).^2) <= inner_radius^2;
+
+% 5) 自动判断海侧
+seed_dx = (c_col_seed - c_col) * pix_deg;
+seed_dy = (c_row_seed - c_row) * pix_deg;
+seed_y_rot = -seed_dx * sin(theta) + seed_dy * cos(theta);
+
+sea_sign = sign(seed_y_rot);
+if sea_sign == 0
+    sea_sign = 1;
+end
+
+SeaSideMask  = (sea_sign * Y_rot) >= 0;
+LandSideMask = ~SeaSideMask;
+
+% 6) 近中心局地限制 —— 这是防止“扫到对岸”的关键
+NearCenterMask = sqrt(X_Dist.^2 + Y_Dist.^2) <= (inner_radius * 1.15);
+
+% 7) 沿岸方向约束
+AlongshoreBand = abs(X_rot) <= inner_radius;
+
+% 8) 向陆最大延伸距离
+D_to_Ocean = bwdist(OceanMask) * pix_deg;
+Max_Inland_Dist = min(max(0.4, inner_radius * 0.35), 1.2);
+LandwardNearCoast = D_to_Ocean <= Max_Inland_Dist;
+
+% 9) 新的内部范围构造
+%    海侧：椭圆 + 近中心限制
+SeawardMask = FinalMask_Shrunk & InnerEllipseMask & SeaSideMask & NearCenterMask;
+
+%    陆侧：沿岸条带 + 近中心限制 + 靠海限制
+LandwardMask = FinalMask_Shrunk & AlongshoreBand & LandSideMask & ...
+               LandwardNearCoast & NearCenterMask;
+
+% 10) 合并
+InnerMask = SeawardMask | LandwardMask;
+    
+    % 10) 平滑+清理
+    R_inner_smooth = max(1, round(0.10 / pix_deg));
+    InnerMask = imclose(InnerMask, strel('disk', R_inner_smooth));
+    InnerMask = imfill(InnerMask, 'holes');
+    InnerMask = bwareaopen(InnerMask, max(10, round(0.02 / (pix_deg^2))));
+    
+    % 11) 只保留最靠近种子海域的主连通分量
+    if any(InnerMask(:))
+        if InnerMask(c_row_seed, c_col_seed)
+            InnerMask = bwselect(InnerMask, c_col_seed, c_row_seed, 8);
+        else
+            [yy, xx] = find(InnerMask);
+            [~, imin] = min((xx - c_col_seed).^2 + (yy - c_row_seed).^2);
+            InnerMask = bwselect(InnerMask, xx(imin), yy(imin), 8);
+        end
+    end
+    
+    % 12) 提取并矢量化内部加密区边界
+    B_in = bwboundaries(InnerMask, 8, 'noholes');
+    if ~isempty(B_in)
+        [~, max_b_in] = max(cellfun(@length, B_in));
+        bnd_in = B_in{max_b_in};
+        x_in_bnd = lon_min + (bnd_in(:,2)-1) * pix_deg;
+        y_in_bnd = lat_min + (bnd_in(:,1)-1) * pix_deg;
+        
+        P_in = polyshape(x_in_bnd, y_in_bnd, 'Simplify', true);
+        [x_inner_out, y_inner_out] = boundary(P_in);
+    else
+        x_inner_out = [];
+        y_inner_out = [];
+        fprintf('   [警告] 内部加密区为空！\n');
+    end
+    
+    % =========================================================================
+    % 9. 导出与绘图
+    % =========================================================================
+    fprintf('9. 输出 shapefile...\n');
+    
+    % --- 导出外圈 Shapefile ---
+    Sout = struct('Geometry', 'Polygon', ...
+                  'BoundingBox', [min(x_out), min(y_out); max(x_out), max(y_out)], ...
+                  'X', [x_out', NaN], ...
+                  'Y', [y_out', NaN], ...
+                  'Name', 'ADCIRC_Fluid_Domain');
+    out_dir = fileparts(out_shp);
+    if ~isempty(out_dir) && ~exist(out_dir, 'dir')
+        mkdir(out_dir);
+    end
+    shapewrite(Sout, out_shp);
+    fprintf('(+) 外圈计算域生成完毕！: %s\n', out_shp);
+    
+    % --- 导出内圈 Shapefile ---
+    if ~isempty(x_inner_out)
+        [fpath, fname, fext] = fileparts(out_shp);
+        out_inner_shp = fullfile(fpath, [fname, '_inner', fext]);
+        Sout_inner = struct('Geometry', 'Polygon', ...
+                      'BoundingBox', [min(x_inner_out), min(y_inner_out); max(x_inner_out), max(y_inner_out)], ...
+                      'X', [x_inner_out', NaN], ...
+                      'Y', [y_inner_out', NaN], ...
+                      'Name', 'ADCIRC_Inner_Domain');
+        shapewrite(Sout_inner, out_inner_shp);
+        fprintf('(+) 内部加密域生成完毕！: %s\n', out_inner_shp);
+    end
+    fprintf('===============================================\n');
+    
+    % --- 可视化预览 ---
+    if exist('m_proj', 'file') ~= 0
+        fprintf('>>> 正在绘制高质量预览图...\n');
+        figure('Name', 'ADCIRC Domain (Topology Corrected)', 'Color', 'w', 'Position', [150, 100, 900, 750]);
+        
+        my_domain = shaperead(out_shp);
+        plot_lon_lim = [min([my_domain.X]) - 4, max([my_domain.X]) + 4];
+        plot_lat_lim = [min([my_domain.Y]) - 4, max([my_domain.Y]) + 4];
+        m_proj('mercator', 'lon', plot_lon_lim, 'lat', plot_lat_lim); 
+        hold on;
+        
+        for i = 1:numel(S)
+            xc = S(i).X; 
+            yc = S(i).Y; 
+            v = ~isnan(xc) & ~isnan(yc);
+            if nnz(v) > 3
+                m_patch(xc(v), yc(v), [0.9 0.85 0.75], 'EdgeColor', [0.5 0.5 0.5], 'LineWidth', 0.5);
+            end
+        end
+        
+        % 外圈
+        m_patch(x_out, y_out, 'r', 'FaceAlpha', 0.25, 'EdgeColor', [0 0.6 1], 'LineWidth', 3.5);
+        
+        % 内圈
+        if ~isempty(x_inner_out)
+            m_patch(x_inner_out, y_inner_out, 'g', 'FaceAlpha', 0.3, 'EdgeColor', [0 0.8 0], 'LineWidth', 2.5, 'LineStyle', '--');
+        end
+        
+        m_grid('box', 'fancy', 'tickdir', 'in', 'fontsize', 10, 'linewidth', 1.5, 'color', 'k');
+        m_line(lon_c, lat_c, 'marker', 'p', 'color', 'b', 'linewi', 2, 'markersize', 14, 'markerfacecolor', 'y');
+        title('ADCIRC Domain: Raw Topology Preserved', 'FontSize', 15, 'FontWeight', 'bold');
+        drawnow;
+    end
+end
+
+
+% =====================================================================
+% 辅助渲染函数：用于生成 6宫格中的 RGB 图像
+% =====================================================================
+function render_step(ax, x_ext, y_ext, LandMask, Mask1, Color1, Mask2, Color2, title_str, lon_c, lat_c)
+    img = ones(size(LandMask,1), size(LandMask,2), 3);
+    R = img(:,:,1); 
+    G = img(:,:,2); 
+    B = img(:,:,3);
+    
+    R(LandMask) = 0.85; 
+    G(LandMask) = 0.85; 
+    B(LandMask) = 0.75;
+    
+    if nargin > 4 && ~isempty(Mask1)
+        R(Mask1) = Color1(1); 
+        G(Mask1) = Color1(2); 
+        B(Mask1) = Color1(3);
+    end
+    if nargin > 6 && ~isempty(Mask2)
+        R(Mask2) = Color2(1); 
+        G(Mask2) = Color2(2); 
+        B(Mask2) = Color2(3);
+    end
+    
+    img(:,:,1) = R; 
+    img(:,:,2) = G; 
+    img(:,:,3) = B;
+    
+    axes(ax);
+    imagesc(x_ext, y_ext, img);
+    axis xy; 
+    axis image;
+    title(title_str, 'FontWeight', 'bold', 'FontSize', 10);
+    hold on;
+    plot(lon_c, lat_c, 'pb', 'MarkerSize', 10, 'MarkerFaceColor', 'y');
+    set(gca, 'XTick', [], 'YTick', []);
+end
