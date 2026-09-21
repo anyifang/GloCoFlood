@@ -228,9 +228,9 @@ as well with:
 ```bash
 python example/PRD_single_TC/run_prd_single_tc.py \
   --sfincs-executable /path/to/sfincs
+```
 
 <img width="9990" height="3456" alt="prd_sfincs_domain" src="https://github.com/user-attachments/assets/2de7e5b9-a751-4987-b16c-a2be41a4f42c" />
-```
 
 Windows users may run `run_prd_example.bat`; Linux and macOS users may run
 `./run_prd_example.sh`. See [QUICKSTART.md](QUICKSTART.md) and the
