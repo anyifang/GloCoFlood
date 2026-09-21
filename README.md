@@ -1,7 +1,8 @@
-<h1 align="center">Global Compound Flood Modeling Workflow</h1>
+<h1 align="center">GloCoFlood</h1>
 
 <p align="center">
-  A script-level workflow for coupling ADCIRC, SFINCS, VIC, and CaMa-Flood to simulate compound coastal flooding driven by storm surge, tides, river discharge, and tropical-cyclone rainfall.
+  An open workflow for global-to-regional compound-flood modelling with
+  ADCIRC, VIC, CaMa-Flood and SFINCS.
 </p>
 
 <p align="center">
@@ -11,145 +12,247 @@
   <img alt="Status" src="https://img.shields.io/badge/status-research%20workflow-informational">
 </p>
 
-## Overview
+GloCoFlood couples storm surge and tides, river discharge and
+tropical-cyclone rainfall to construct high-resolution coastal inundation
+cases. The public workflow contains the production scripts used for 41 ADCIRC
+blocks and 97 reusable global SFINCS coastal domains, together with a compact
+Pearl River Delta (PRD) example that can be prepared immediately after the
+repository is downloaded.
 
-This repository documents the main modeling scripts used to build a global-to-regional compound flood workflow. The workflow links:
+> **Scope.** This is a reproducible research workflow rather than a packaged
+> modelling service. Large licensed datasets, model executables and global
+> simulation outputs are not distributed in the repository.
 
-- `ADCIRC` for storm surge and tidal water-level modeling.
-- `VIC + CaMa-Flood` for rainfall-runoff generation and river discharge routing.
-- `SFINCS` for high-resolution coastal and deltaic inundation simulation.
+## Quick start
 
-Only the core modeling scripts are included. Large forcing datasets, model executables, generated case folders, NetCDF outputs, rasters, and figures are intentionally excluded.
+Run these commands from the repository root:
 
-## Workflow
-
-<img width="5222" height="4132" alt="fig1" src="https://github.com/user-attachments/assets/f97b2529-758b-4898-ad56-21fba8fb3f1f" />
-
-## Example
-<img width="3163" height="3499" alt="fig2" src="https://github.com/user-attachments/assets/d1c17bcf-6f36-4ab9-8ef6-5cc7dcc7aa49" />
-
-## Repository Layout
-
-```text
-.
-|-- ADCIRC/
-|   |-- Global_auto.m
-|   |-- Global_autofunction/
-|   |-- make_fort13_open_boundary_boost.m
-|   |-- make_fort14_to_cases.m
-|   |-- make_fort15_from_template.m
-|   |-- make_fort19_from_tmd.m
-|   `-- make_fort22_IBTrACS_C15.m
-|-- SFINCS/
-|   |-- BoB_building.py
-|   |-- Misp_building.py
-|   |-- PRD_building.py
-|   |-- YRD_building.py
-|   `-- sfincs_couple_adcirc_cama_tc_rain_future_batch.py
-`-- VIC_CAMAflood/
-    |-- auto_cama_vic_coupled.py
-    |-- auto_cama_vic_coupled_module_BoB.sh
-    |-- auto_cama_vic_coupled_module_Misp.sh
-    |-- auto_cama_vic_coupled_module_PRD.sh
-    |-- auto_cama_vic_coupled_module_YRD.sh
-    |-- Autorun_Camaflood_exp.sh
-    `-- plot_vic_runoff.py
+```bash
+python check_repository.py
+python -m pip install -r example/PRD_single_TC/requirements.txt
+python example/PRD_single_TC/run_prd_single_tc.py
 ```
 
-## Model Components
+The first command checks the published inventories and bundled-data
+checksums. The remaining commands prepare and validate one complete historical
+PRD compound-forcing case under:
 
-| Folder | Role | Main outputs |
+```text
+example/PRD_single_TC/output/
+```
+
+This default example does not require the global source archives and does not
+launch SFINCS. If a SFINCS executable is available, run the hydrodynamic model
+as well with:
+
+```bash
+python example/PRD_single_TC/run_prd_single_tc.py \
+  --sfincs-executable /path/to/sfincs
+```
+
+Windows users may run `run_prd_example.bat`; Linux and macOS users may run
+`./run_prd_example.sh`. See [QUICKSTART.md](QUICKSTART.md) and the
+[PRD example guide](example/PRD_single_TC/README.md) for details.
+
+## Coupled modelling framework
+<img width="5223" height="4130" alt="fig1" src="https://github.com/user-attachments/assets/f5b953df-eb7f-4ba9-a5b4-312dd4c88542" />
+
+| Component | Function | Principal products |
 | --- | --- | --- |
-| `ADCIRC/` | Build regional ADCIRC domains, meshes, open boundaries, and storm/tide forcing files. | ADCIRC mesh and `fort.*` input files. |
-| `VIC_CAMAflood/` | Prepare VIC domains, meteorological forcing, VIC runoff, and CaMa-Flood routing setup. | VIC runoff and CaMa-Flood river discharge forcing. |
-| `SFINCS/` | Build regional SFINCS domains and assemble coupled surge, river, and rainfall forcing. | SFINCS model folders and coupled inundation cases. |
+| [ADCIRC](ADCIRC/README.md) | Regional meshes, tides and TC wind-pressure forcing | `fort.13`, `fort.14`, `fort.15`, `fort.19`, `fort.22`, `fort.63` |
+| [VIC + CaMa-Flood](VIC_CAMAflood/README.md) | Rainfall-runoff modelling and river routing | Runoff fields and routed inlet discharge |
+| [SFINCS](SFINCS/README.md) | Coupling and high-resolution inundation modelling | Runnable historical and future compound-flood cases |
 
-## ADCIRC
+The complete dependency order is documented in
+[GLOBAL_WORKFLOW.md](GLOBAL_WORKFLOW.md).
 
-`ADCIRC/Global_auto.m` is the main ADCIRC domain and mesh driver. It selects the target estuary or delta, constructs the computational domain, filters coastline data, selects DEM inputs, builds the OceanMesh2D mesh, interpolates bathymetry/topography, and exports the ADCIRC mesh.
+## Repository structure
 
-Helper functions in `ADCIRC/Global_autofunction/` support automatic domain generation, coastline filtering, fine DEM selection, morphological smoothing, and open-boundary construction.
+```text
+GloCoFlood/
+|-- ADCIRC/
+|   |-- Global_autofunction/          MATLAB geometry and mesh helpers
+|   `-- global_build/                 P1-P9 global ADCIRC workflow
+|-- SFINCS/
+|   |-- global_build/                 97-domain and compound-case builders
+|   `-- P1_* / P2_*                   original regional reference scripts
+|-- VIC_CAMAflood/
+|   |-- global_postprocessing/        routed-flow products for SFINCS
+|   `-- auto_cama_vic_coupled.py      regional VIC/CaMa-Flood workflow
+|-- data_download/                    supported data-download utilities
+|-- example/PRD_single_TC/            bundled, directly verifiable example
+|-- check_repository.py               dependency-free repository checker
+|-- QUICKSTART.md                     shortest first-use route
+|-- GLOBAL_WORKFLOW.md                end-to-end production sequence
+|-- VALIDATION.md                     checks completed for this release
+`-- scripts_manifest.csv              public script inventory
+```
 
-The `make_fort*.m` scripts prepare ADCIRC case inputs:
+Files prefixed with `P1_`, `P2_`, and so on are ordered by dependency within
+their directory. Files sharing a number are independent tasks or alternative
+implementations at the same stage. In particular, the serial and parallel
+ADCIRC P5 builders are alternatives and must not both be used for the same
+build.
 
-| Script | Purpose |
-| --- | --- |
-| `make_fort13_open_boundary_boost.m` | Generate spatial nodal attributes such as friction and open-boundary adjustments. |
-| `make_fort14_to_cases.m` | Copy the generated mesh into case directories. |
-| `make_fort15_from_template.m` | Create ADCIRC control files from a template. |
-| `make_fort19_from_tmd.m` | Generate tidal boundary forcing from tide model data. |
-| `make_fort22_IBTrACS_C15.m` | Generate tropical-cyclone wind and pressure forcing from TC tracks. |
+## Global production workflow
 
-## VIC + CaMa-Flood
+### 1. Acquire and register input data
 
-`VIC_CAMAflood/auto_cama_vic_coupled.py` is the main Python workflow for building regional VIC and CaMa-Flood inputs. It prepares the regional CaMa-Flood map, creates VIC domain and parameter files, converts ERA5 or prepared meteorological data into VIC forcing, runs VIC, converts VIC runoff into CaMa-Flood forcing, and prepares CaMa-Flood execution scripts.
+The utilities in [`data_download/`](data_download/README.md) support official
+IBTrACS and ERA5/CDS requests and check the proposed external-data layout:
 
-The region-specific shell workflows wrap the coupled setup for HPC environments:
+```bash
+python data_download/P1_download_ibtracs.py
+python data_download/P1_download_cds_era5.py tcr-environment \
+  --start-year 1975 --end-year 2014
+python data_download/P2_check_data_layout.py external
+```
 
-| Script | Region |
-| --- | --- |
-| `auto_cama_vic_coupled_module_BoB.sh` | Bay of Bengal |
-| `auto_cama_vic_coupled_module_Misp.sh` | Mississippi |
-| `auto_cama_vic_coupled_module_PRD.sh` | Pearl River Delta |
-| `auto_cama_vic_coupled_module_YRD.sh` | Yangtze River Delta |
+Downloads remain outside version control. FABDEM, CaMa-Flood maps, tidal data,
+C15/CLIMADA support data and project-specific downscaled historical and future
+TC tracks must be obtained separately from their official providers under the
+applicable licences.
 
-`Autorun_Camaflood_exp.sh` is the CaMa-Flood run template used after runoff forcing and regional map files are prepared.
+### 2. Build ADCIRC domains and event forcing
 
-`plot_vic_runoff.py` is kept as an optional quick-look utility for checking VIC runoff fields before routing.
+[`ADCIRC/global_build/`](ADCIRC/global_build/README.md) provides the ordered
+P1-P9 workflow to:
 
-## SFINCS
+1. group the 97 coastal domains into 41 ADCIRC blocks;
+2. generate OceanMesh2D meshes and static/tidal `fort.*` inputs;
+3. select historical TC events and build event-specific forcing;
+4. stage return-period simulations and collect `fort.63`; and
+5. reconstruct future SSP1-2.6, SSP2-4.5 and SSP3-7.0 cases.
 
-The SFINCS build scripts create regional high-resolution flood models:
+Copy `ADCIRC/global_build/configure_paths.example.m` to the ignored local file
+`configure_paths.m`, set the external-data and work locations, and follow the
+numbered scripts in the component README.
 
-| Script | Region |
-| --- | --- |
-| `BoB_building.py` | Bay of Bengal |
-| `Misp_building.py` | Mississippi |
-| `PRD_building.py` | Pearl River Delta |
-| `YRD_building.py` | Yangtze River Delta |
+### 3. Generate river discharge
 
-These scripts create SFINCS grids, load and adjust terrain, generate model masks and boundary cells, connect river inflow points from CaMa-Flood, prepare land-cover and roughness data, and link external forcing files.
+[`VIC_CAMAflood/`](VIC_CAMAflood/README.md) prepares VIC meteorological
+forcing, converts runoff for CaMa-Flood and routes river discharge. The global
+post-processing stages then match independent upstream CaMa-Flood cells to
+SFINCS inlet points and construct the TC-weighted P50/P90 inflow products:
 
-`sfincs_couple_adcirc_cama_tc_rain_future_batch.py` assembles coupled SFINCS cases by combining ADCIRC water levels, CaMa-Flood discharge, and tropical-cyclone rainfall.
+```bash
+python VIC_CAMAflood/global_postprocessing/P1_plot_sfincs_inflow_diagnostics.py --help
+python VIC_CAMAflood/global_postprocessing/P2_build_gtc_inlet_tc_flow_summary_from_cache.py --help
+```
 
-## Suggested Execution Order
+### 4. Build the 97 SFINCS domains
 
-1. Update local paths, model installation paths, data paths, and HPC module settings.
-2. Run `ADCIRC/Global_auto.m` to generate the ADCIRC regional mesh.
-3. Run the `ADCIRC/make_fort*.m` scripts to prepare ADCIRC input files.
-4. Run the appropriate `VIC_CAMAflood/auto_cama_vic_coupled_module_*.sh` script, or call `auto_cama_vic_coupled.py` directly.
-5. Run `VIC_CAMAflood/Autorun_Camaflood_exp.sh` to route runoff with CaMa-Flood.
-6. Run the target `SFINCS/*_building.py` script to build the regional SFINCS domain.
-7. Run `SFINCS/sfincs_couple_adcirc_cama_tc_rain_future_batch.py` to generate coupled SFINCS forcing and cases.
+[`SFINCS/global_build/P1_build_sfincs_models_from_partition.py`](SFINCS/global_build/P1_build_sfincs_models_from_partition.py)
+builds reusable `GTC_####` domains from the included partition inventory. A
+non-writing selection check can be run before the large external terrain and
+river datasets are connected:
 
-## External Requirements
+```bash
+python SFINCS/global_build/P1_build_sfincs_models_from_partition.py \
+  --dry-run --limit 1 --no-plot
+```
 
-The workflow expects local installations or datasets for:
+### 5. Assemble historical and future compound cases
 
-- ADCIRC
-- OceanMesh2D
-- SFINCS and HydroMT-SFINCS
-- VIC Image Driver
-- CaMa-Flood
-- ERA5 meteorological forcing
-- IBTrACS tropical cyclone tracks
-- TMD tidal data
-- DEM, coastline, land-cover, and river-network datasets
+Copy
+`SFINCS/global_build/config/paths.example.toml` to the ignored local file
+`paths.toml`, edit the external paths, and validate the configuration:
 
-## Notes for Reuse
+```bash
+python SFINCS/global_build/run_global_build_from_config.py \
+  --config SFINCS/global_build/config/paths.toml --check-only
+```
 
-Many scripts contain hard-coded paths from the original computing environment. Before reuse, check:
+Start with one event:
 
-- Data root directories.
-- Model executable paths.
-- HPC module names and queue settings.
-- Region names, bounding boxes, and estuary-specific parameters.
-- Input/output folder conventions.
+```bash
+python SFINCS/global_build/run_global_build_from_config.py \
+  --config SFINCS/global_build/config/paths.toml \
+  --limit-events 1 --workers 4
+```
 
-## Citation
+After that smoke test passes, launch the full historical and three-scenario
+build with eight workers:
 
-If you use or adapt this workflow, please cite the associated study or contact the repository author for citation details.
+```bash
+python SFINCS/global_build/run_global_build_from_config.py \
+  --config SFINCS/global_build/config/paths.toml \
+  --workers 8 --continue-on-error
+```
+
+The builders cache the invariant ADCIRC-to-SFINCS boundary mapping and reuse
+static domain files where possible. Preserve the generated directory tree
+when transferring cases because `sfincs.inp` may contain relative references.
+
+## Scientific conventions implemented in the public workflow
+
+- `vmax_trks` is treated as the total 1-min near-surface maximum wind.
+- Translation speed is removed once to obtain the symmetric rotating surface
+  core used by the Cv/Rmax and Holland-B calculations.
+- In the ADCIRC builder, C15 supplies the 1-min surface tangential profile;
+  translation is restored once and the complete surface field is multiplied
+  by `0.893` to produce the 10-min wind written to `fort.22`. No additional
+  `0.85` factor is applied.
+- Physics-based TCR uses gradient-level wind. The SFINCS rainfall builder uses
+  `gradient_core = surface_core / 0.9` to select the C15 profile and uses the
+  returned profile directly; it is not divided by `0.9` a second time. The
+  same surface-to-gradient relationship is used in the TCR humidity
+  diagnosis.
+- The ADCIRC `0.893` averaging-period conversion is independent of the TCR
+  `0.9` surface-to-gradient relationship and is not applied to rainfall.
+
+More detailed conventions and required variables are documented in the
+[ADCIRC global-build guide](ADCIRC/global_build/README.md) and
+[SFINCS global-build guide](SFINCS/global_build/README.md).
+
+## Software and data requirements
+
+The full production workflow requires local installations of MATLAB,
+OceanMesh2D, ADCIRC, Python, VIC, CaMa-Flood, HydroMT-SFINCS/SFINCS, CLIMADA
+and CLIMADA Petals, together with their model-specific datasets. Exact package
+and executable versions should be recorded for each scientific release.
+
+The repository intentionally excludes:
+
+- model executables and cluster-specific modules;
+- global forcing archives and licence-controlled datasets;
+- generated ADCIRC and SFINCS case trees;
+- bulk NetCDF, raster and binary results; and
+- credentials or machine-specific path configuration.
+
+Do not commit `paths.toml`, `configure_paths.m`, credentials or generated
+outputs. The supplied `.gitignore` excludes these common local products.
+
+## Validation and reproducibility
+
+The release checker uses only the Python standard library:
+
+```bash
+python check_repository.py
+```
+
+It checks the manifest, 97 SFINCS partitions, 41 ADCIRC blocks, all 97
+block-domain memberships and every checksum in the bundled PRD case. See
+[VALIDATION.md](VALIDATION.md) for the completed code, path, syntax and
+fresh-copy tests. These checks validate repository integration; they do not
+replace scientific validation of external datasets or full ADCIRC,
+CaMa-Flood and SFINCS simulations.
+
+## Citation and licence
+
+If you use or adapt this workflow, please cite the associated study and the
+underlying ADCIRC, SFINCS, VIC, CaMa-Flood, CLIMADA and input-dataset
+references. A formal software citation will be added when the author list and
+archive DOI are final.
+
+**A repository licence has not yet been selected.** Until a `LICENSE` file is
+added, the source is publicly visible but no general permission to copy,
+modify or redistribute it is granted. Maintainers should complete the
+[release checklist](RELEASE_CHECKLIST.md) before publishing a versioned
+release.
 
 ## Author
 
-Anyifang Zhang
+Anyifang Zhang  
+Southern University of Science and Technology  
+Contact: `zhangayf@sustech.edu.cn`
