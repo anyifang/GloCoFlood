@@ -1,0 +1,45 @@
+[paths]
+# Relative paths are resolved from the repository root, regardless of the
+# directory from which the launcher is called.
+project_dir = "."
+
+# Reusable SFINCS domains and ADCIRC/SFINCS membership information. The
+# published membership CSV is also available at
+# ADCIRC/global_build/catalog/global_tc_adcirc_block_members.csv.
+sfincs_model_root = "external/sfincs_models/global_sfincs_partition_models_cama_15min"
+adcirc_info_root = "ADCIRC/global_build/catalog"
+membership_csv = "ADCIRC/global_build/catalog/global_tc_adcirc_block_members.csv"
+adcirc_mesh_root = "external/adcirc/adcirc_fort14_meshes"
+
+# Selected-event ADCIRC outputs and their run metadata.
+adcirc_result_parent = "external/adcirc/return_out"
+adcirc_run_parent = "external/adcirc/return_period_tc_event_reruns"
+
+# Historical and future CaMa-Flood data and diagnostic tables/caches.
+cama_historical_root = "external/camaflood/output/ERA5"
+cama_future_root = "external/camaflood/output"
+cama_diagnostic_root = "external/camaflood/output/gtc_cama_inflow_figures"
+cama_diagnostic_cache = "external/camaflood/output/gtc_cama_inflow_figures/cache"
+
+# TC track and environmental inputs required by TCR.
+historical_track_nc = "external/tracks/tracks_GL_era5_197501_201412.nc"
+era5_t600_root = "external/era5/tcr_environment"
+cmip6_t600_root = "external/cmip6/tcr_environment"
+c15_predata_dir = "external/C15_predata"
+climada_tcr_data_dir = "external/climada/data/hazard/tc_rainfield"
+
+# Future VLM-adjusted SFINCS terrain files.
+vlm_adjusted_dep_root = "external/vlm_data/gtc_terrain_overlay/adjusted_dep"
+
+# Writable reusable cache and final output locations.
+boundary_map_cache = "work/cache/adcirc_sfincs_boundary_maps"
+output_root = "work/global_sfincs_100yr_q50_tcr"
+
+[build]
+return_period = 100
+cama_quantile = 0.50
+workers = 8
+copy_mode = "hardlink"
+continue_on_error = true
+overwrite = false
+log_level = "INFO"

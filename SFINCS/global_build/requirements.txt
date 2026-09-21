@@ -1,0 +1,17 @@
+numpy
+pandas
+xarray
+scipy
+geopandas
+pyproj
+rasterio
+rioxarray
+shapely
+hydromt
+hydromt-sfincs
+netCDF4
+h5netcdf
+matplotlib
+cartopy
+climada
+climada_petals

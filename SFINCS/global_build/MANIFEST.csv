@@ -1,0 +1,16 @@
+path,role,public_data_included
+P1_build_sfincs_models_from_partition.py,Build reusable SFINCS domains from the 97 coastal partitions,yes
+plot_sfincs_partition_models.py,Plot reusable SFINCS domains and matched inflows,yes
+global_tc_coastal_model_partitions/global_tc_coastal_model_domain_boundaries.geojson,Published 97-domain partition geometries,yes
+global_tc_coastal_model_partitions/global_tc_coastal_model_domains.csv,Published partition metadata and ordering,yes
+P2_build_sfincs_historical_return_period_compound_forcing.py,Historical builder and shared global implementation,no
+P3_build_sfincs_future_return_period_compound_forcing.py,Future SSP builder,no
+run_four_compound_builds_parallel.py,Four/eight-process orchestrator,no
+run_global_build_from_config.py,Portable TOML launcher,no
+../../example/PRD_single_TC/run_prd_single_tc.py,One-event Pearl River Delta builder and verifier,yes
+../../example/PRD_single_TC/README.md,PRD example instructions and output layout,yes
+config/paths.example.toml,External path and build configuration template,no
+requirements.txt,Python dependency names,no
+VALIDATION.md,Release smoke-test record,no
+utilities/build_sfincs_forcing_decomposition_cases.py,Optional driver-removal case generator,no
+utilities/check_sfincs_map_result.py,Optional SFINCS result integrity checker,no
