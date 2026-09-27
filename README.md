@@ -241,3 +241,7 @@ Windows users may run `run_prd_example.bat`; Linux and macOS users may run
 Anyifang Zhang  
 Southern University of Science and Technology  
 Contact: `zhangayf@sustech.edu.cn`
+
+## Related manuscript
+
+The modelling framework implemented in this repository is described in the manuscript “A Globally Applicable Model for Projecting Tropical Cyclone-Induced Compound Flooding in Delta Regions”, which is currently under review at *Earth’s Future*.
