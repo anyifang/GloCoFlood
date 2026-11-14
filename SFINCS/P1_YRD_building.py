@@ -2888,6 +2888,8 @@ if "src" in sf.geoms:
     sf.set_config("srcfile", "sfincs.src")
     sf.set_config("disfile", "sfincs.dis")
 sf.write()
+from scs_infiltration import apply_scs_infiltration
+apply_scs_infiltration(MODEL_FOLDER)
 
 # =========================================================
 # 7. 手动生成 ADCIRC 耦合原生 bnd 和 bzs 文件

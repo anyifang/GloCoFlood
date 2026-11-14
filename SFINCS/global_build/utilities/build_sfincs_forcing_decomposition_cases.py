@@ -39,6 +39,7 @@ FILE_KEYS = {
     "spwfile", "spw2file", "wndfile", "netamuamvfile", "netampfile",
     "netamprfile", "precipfile", "amprfile", "qinffile", "netqinf_file",
     "psifile", "sigmafile", "ksfile", "f0file", "fcfile", "kdfile",
+    "scsfile", "smaxfile", "sefffile",
 }
 RIVER_KEYS = {"srcfile", "disfile", "netsrcdisfile"}
 RAIN_KEYS = {"netamprfile", "precipfile", "amprfile"}

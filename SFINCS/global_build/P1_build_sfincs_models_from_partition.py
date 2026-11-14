@@ -30,6 +30,8 @@ import pandas as pd
 
 
 SCRIPT_DIR = Path(__file__).resolve().parent
+sys.path.insert(0, str(SCRIPT_DIR.parent))
+from scs_infiltration import apply_scs_infiltration, enabled as scs_enabled, settings as scs_settings, cn_source
 REPO_ROOT = SCRIPT_DIR.parents[1]
 DEFAULT_HYDROMT_EXAMPLES = Path(
     os.environ.get(
@@ -3674,6 +3676,7 @@ def prepare_partition_domain_files(row, cfg: Config) -> dict:
     region_wgs.to_file(region_path, driver="GeoJSON")
     bbox = tuple(float(v) for v in domain_wgs.total_bounds)
 
+    apply_scs_infiltration(model_dir)
     return {
         "model_domain_id": model_id,
         "plot_rank": plot_rank,

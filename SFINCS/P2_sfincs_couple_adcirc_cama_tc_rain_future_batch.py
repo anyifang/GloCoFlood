@@ -1472,6 +1472,8 @@ def process_one_case(
         dis_path = output_model_root / "sfincs.dis"
         base.write_sfincs_dis_file(str(dis_path), q_df_final)
 
+    from scs_infiltration import apply_scs_infiltration
+    apply_scs_infiltration(output_model_root)
     log(f"   [OK] completed: {output_model_root}")
     return {
         "case": case_name,

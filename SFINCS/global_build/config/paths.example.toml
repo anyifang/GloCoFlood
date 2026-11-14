@@ -43,3 +43,8 @@ copy_mode = "hardlink"
 continue_on_error = true
 overwrite = false
 log_level = "INFO"
+
+[infiltration]
+# External GCN250 ARCII soil input; never bundled or downloaded automatically.
+method = "scs_cn"
+cn_raster = "external/soil/GCN250_ARCII.tif"

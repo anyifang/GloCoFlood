@@ -103,6 +103,21 @@ def main(argv: Sequence[str] | None = None) -> int:
     for key, variable in PATH_ENV.items():
         env[variable] = str(resolved[key])
 
+    infiltration = cfg.get("infiltration", {})
+    method = str(infiltration.get("method", "scs_cn")).lower()
+    if method not in {"scs_cn", "none"}:
+        raise ValueError("[infiltration].method must be scs_cn or none")
+    env["SFINCS_INFILTRATION"] = method
+    if method == "scs_cn":
+        cn = Path(os.path.expandvars(str(infiltration.get("cn_raster", "external/soil/GCN250_ARCII.tif")))).expanduser()
+        if not cn.is_absolute():
+            cn = REPOSITORY_ROOT / cn
+        cn = cn.resolve()
+        if not cn.is_file():
+            raise FileNotFoundError(f"GCN250 ARCII raster is required: {cn}")
+        env["SFINCS_GCN250_PATH"] = str(cn)
+        env["SFINCS_SCS_CACHE"] = str(resolved["output_root"].parent / "cache" / "scs")
+
     command = [sys.executable, str(RUNNER)]
     scalar_options = {
         "--return-period": configured(args.return_period, build.get("return_period", 100)),

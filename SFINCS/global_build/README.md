@@ -1,5 +1,15 @@
 # Global historical and future SFINCS case builder
 
+## Infiltration input
+
+New P1/P2/P3 models now enable GCN250 ARCII SCS-CN infiltration by default.
+Configure `[infiltration]` in `config/paths.example.toml`, or set
+`SFINCS_GCN250_PATH` when calling the Python builders directly. See
+`../README.md` for the exact conversion, missing-data convention and limitations.
+The soil raster is external and is not bundled. Decomposition utilities retain
+and correctly rebase the baseline `scsfile`, with the same soil parameters in
+FULL and removal runs. They do not recompute soil from a different dataset.
+
 ## Scope
 
 This directory contains the production-scale builder for the 97 global SFINCS
@@ -41,6 +51,17 @@ forcing) and P3 (future forcing). `run_four_compound_builds_parallel.py` and
 additional stages to run afterwards. The plotting and `utilities/` scripts
 are optional diagnostics.
 
+## C15/TCR wind convention
+
+The track variable `vmax_trks` is the 1-min near-surface wind. Rmax and
+Holland-B retain the surface-wind definitions used by the ADCIRC builder.
+Physics-based TCR requires gradient-level wind, so the builder first computes
+`gradient_core = max(vmax_trks - translation_speed, 0) / 0.9`. This gradient
+peak selects the C15 lookup profile, which is then used directly as the TCR
+gradient-wind profile; `C15.vg` is not divided by `0.9` a second time. The
+same `0.9` relationship is used by the TCR humidity diagnosis. ADCIRC's
+independent `0.893` conversion from 1-min to 10-min surface wind is not
+applied to TCR rainfall.
 
 
 ## Installation

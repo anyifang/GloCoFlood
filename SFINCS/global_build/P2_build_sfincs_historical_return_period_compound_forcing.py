@@ -95,6 +95,8 @@ CAMA_FILL_LOW = -9000.0
 CAMA_FILL_HIGH = 1.0e19
 
 SCRIPT_DIR = Path(__file__).resolve().parent
+sys.path.insert(0, str(SCRIPT_DIR.parent))
+from scs_infiltration import apply_scs_infiltration, enabled as scs_enabled, settings as scs_settings, cn_source
 
 
 def configured_path(name: str, default: str | Path) -> Path:
@@ -2060,6 +2062,12 @@ def runtime_model_complete(target: Path) -> bool:
     if not inp_path.is_file() or inp_path.stat().st_size == 0:
         return False
     try:
+        if scs_enabled():
+            values = scs_settings(inp_path)
+            if values.get("scsfile", "none") == "none" or float(values.get("sfacinf", "0")) != .2 or values.get("storecumprcp") != "1":
+                return False
+            if not (target / "infiltration_metadata.json").is_file():
+                return False
         references = sfincs_file_references(inp_path)
     except (OSError, ValueError):
         return False
@@ -3929,7 +3937,9 @@ def build_one_model(
             "ampr_block": 1 if args.rain_model != "none" else None,
         }
         update_sfincs_inp(target / "sfincs.inp", updates)
+        infiltration = apply_scs_infiltration(target)
         marker = {
+            "infiltration": infiltration,
             "status": "complete",
             "return_period_years": args.return_period,
             "flow_quantile_nonexceedance": args.cama_quantile,
@@ -4164,6 +4174,11 @@ def run(args: argparse.Namespace) -> int:
         max_output_description,
     )
     issues = preflight(args, events, args.dry_run)
+    if scs_enabled():
+        try:
+            cn_source()
+        except (ValueError, OSError) as exc:
+            issues.append(str(exc))
     for issue in issues:
         LOG.warning(issue)
     if args.dry_run:
