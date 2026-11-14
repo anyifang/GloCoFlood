@@ -194,12 +194,13 @@ CaMa-Flood and SFINCS simulations.
 ### Application in four representative estuarine and deltaic regions
 To demonstrate the transferability of the modelling framework, GloCoFlood was
 applied to four contrasting, TC-prone coastal systems: the Mississippi River
-Delta (MRD), Yangtze River Delta (YRD), Bay of Bengal (BoB) and Pearl River
+Delta (MRD), Yangtze River Delta (YRD), Ganges-Brahmaputra-Meghna Delta (GBMD) and Pearl River
 Delta (PRD). The same coupled workflow is used in each region, while the model
 domains, mesh resolution, river network and forcing boundaries are adapted to
 the local coastal setting.
 
-<img width="3163" height="3499" alt="global_domain_examples" src="https://github.com/user-attachments/assets/8ba6a4c2-b89d-447f-8bdf-a46396db4c75" />
+<img width="3164" height="3465" alt="Figure_2" src="https://github.com/user-attachments/assets/4047d663-2004-48de-a201-2d8b86a09c39" />
+
 
 
 ## Quick start
