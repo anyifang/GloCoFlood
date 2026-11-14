@@ -25,7 +25,8 @@ repository is downloaded.
 
 
 ## Coupled modelling framework
-<img width="5223" height="4130" alt="fig1" src="https://github.com/user-attachments/assets/f5b953df-eb7f-4ba9-a5b4-312dd4c88542" />
+<img width="5225" height="4372" alt="Figure_1" src="https://github.com/user-attachments/assets/01e774a4-7a66-4ed2-b488-ce7553154fa7" />
+
 
 | Component | Function | Principal products |
 | --- | --- | --- |
