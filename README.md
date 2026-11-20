@@ -1,7 +1,6 @@
-<h1 align="center">GloCoFlood</h1>
+<h1 align="center">GloCoFlood: Globally transferable modeling for Compound Flood</h1>
 
 <p align="center">
-  GloCoFlood: Globally transferable modeling of compound flood
   An open workflow for global-to-regional compound-flood modelling with
   ADCIRC, VIC, CaMa-Flood and SFINCS.
 </p>
